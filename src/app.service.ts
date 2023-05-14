@@ -106,7 +106,7 @@ export class AppService {
 
       if (countRedTickers >= 3 || countGreenTickers >= 3) {
         const stopSlotPrice = lastPrice * 0.98;
-        const takeProfitPrice = lastPrice * 1.003;
+        const takeProfitPrice = lastPrice * 1.0035;
 
         return this.exchange.submitOrder({
           category: 'linear',
