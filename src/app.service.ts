@@ -178,6 +178,141 @@ export class AppService {
       percent: changePercent,
     };
   }
+
+  @Cron('0 */15 * * * *')
+  async catchHammerTicker() {
+    const symbol = 'BTCUSDT';
+
+    enum TickerType {
+      Red = 'Red',
+      Green = 'Green',
+    }
+    enum Direction {
+      Buy = 'Buy',
+      Sell = 'Sell',
+    }
+
+    const tickers = (
+      await this.exchange.getKline({
+        category: 'linear',
+        symbol,
+        interval: '15',
+        // start?: number;
+        // end?: number;
+        limit: 2,
+      })
+    )?.result?.list;
+
+    tickers.sort((a, b) => (a[0] > b[0] ? 1 : -1));
+
+    const [ticker, currentTicker] = tickers.map((x) => formatOHLCV(x));
+
+    const tickerType =
+      ticker.open < ticker.close ? TickerType.Green : TickerType.Red;
+    const currentTickerType =
+      currentTicker.open < currentTicker.close
+        ? TickerType.Green
+        : TickerType.Red;
+
+    if (tickerType === TickerType.Red) {
+      const percentHigherShadow =
+        ((ticker.high - ticker.open) / ticker.open) * 100;
+      const percentLowerShadow =
+        ((ticker.close - ticker.low) / ticker.open) * 100;
+
+      if (
+        percentHigherShadow < 0.03 &&
+        percentLowerShadow > 0.55 &&
+        currentTickerType === TickerType.Green
+      ) {
+        const stopSlotPrice = ticker.low;
+        const tpRatio = 0.005;
+
+        const takeProfitPrice = ticker.close * (1 + tpRatio);
+
+        console.log(
+          {
+            percentHigherShadow,
+            percentLowerShadow,
+            currentTickerType,
+          },
+          'Order hammer ticker for BUY',
+        );
+
+        return this.exchange.submitOrder({
+          category: 'linear',
+          symbol,
+          isLeverage: 1,
+          side: Direction.Buy,
+          orderType: 'Market',
+          qty: '0.001',
+          stopLoss: stopSlotPrice.toFixed(0),
+          takeProfit: takeProfitPrice.toFixed(0),
+          tpTriggerBy: 'MarkPrice',
+          slTriggerBy: 'MarkPrice',
+        });
+      } else {
+        console.log({
+          percentHigherShadow,
+          percentLowerShadow,
+          currentTickerType,
+        });
+        return {
+          percentHigherShadow,
+          percentLowerShadow,
+          currentTickerType,
+        };
+      }
+    }
+
+    const percentHigherShadow =
+      ((ticker.high - ticker.close) / ticker.open) * 100;
+    const percentLowerShadow = ((ticker.open - ticker.low) / ticker.open) * 100;
+
+    if (
+      percentHigherShadow > 0.55 &&
+      percentLowerShadow > 0.03 &&
+      currentTickerType === TickerType.Red
+    ) {
+      const stopSlotPrice = ticker.high;
+      const tpRatio = 0.005;
+
+      const takeProfitPrice = ticker.close * (1 + tpRatio);
+
+      console.log(
+        {
+          percentHigherShadow,
+          percentLowerShadow,
+          currentTickerType,
+        },
+        'Order hammer ticker for SELL',
+      );
+
+      return this.exchange.submitOrder({
+        category: 'linear',
+        symbol,
+        isLeverage: 1,
+        side: Direction.Sell,
+        orderType: 'Market',
+        qty: '0.001',
+        stopLoss: stopSlotPrice.toFixed(0),
+        takeProfit: takeProfitPrice.toFixed(0),
+        tpTriggerBy: 'MarkPrice',
+        slTriggerBy: 'MarkPrice',
+      });
+    } else {
+      console.log({
+        percentHigherShadow,
+        percentLowerShadow,
+        currentTickerType,
+      });
+      return {
+        percentHigherShadow,
+        percentLowerShadow,
+        currentTickerType,
+      };
+    }
+  }
 }
 
 const formatOHLCV = (price) => {
