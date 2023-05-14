@@ -65,11 +65,11 @@ export class AppService {
       }
 
       if (i === tickers.length - 1) {
-        if (ticker.close > lastPrice && countGreenTickers > 3) {
+        if (ticker.close > lastPrice && countGreenTickers >= 3) {
           shouldOrder = true;
         }
 
-        if (ticker.close < lastPrice && countRedTickers > 3) {
+        if (ticker.close < lastPrice && countRedTickers >= 3) {
           shouldOrder = true;
         }
 
