@@ -84,7 +84,9 @@ export class AppService {
         (Math.abs(ticker.close - lastPrice) / lastPrice) * 100;
 
       if (ticker.close > ticker.open && ticker.close > lastPrice) {
-        firstPrice = ticker.close;
+        if (!countGreenTickers) {
+          firstPrice = ticker.close;
+        }
 
         if (tickerChangePercent > 1) {
           percentCanShortWin += 33;
@@ -98,7 +100,9 @@ export class AppService {
       }
 
       if (ticker.close < ticker.open && ticker.close < lastPrice) {
-        firstPrice = ticker.close;
+        if (!countRedTickers) {
+          firstPrice = ticker.close;
+        }
 
         if (tickerChangePercent > 1) {
           percentCanLongWin += 33;
