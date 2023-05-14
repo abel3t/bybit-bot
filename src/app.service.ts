@@ -79,10 +79,12 @@ export class AppService {
 
       if (ticker.close > ticker.open && ticker.close > lastPrice) {
         ++countGreenTickers;
+        countRedTickers = 0;
       }
 
       if (ticker.close < ticker.open && ticker.close < lastPrice) {
         ++countRedTickers;
+        countGreenTickers = 0;
       }
 
       lastPrice = ticker.close;
