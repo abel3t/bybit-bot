@@ -56,6 +56,9 @@ export class AppService {
 
     let shouldOrder = false;
 
+    let percentCanLongWin = 0;
+    let percentCanShortWin = 0;
+
     tickers.forEach((x, i) => {
       const ticker = formatOHLCV(x);
       if (i === 0) {
@@ -77,21 +80,42 @@ export class AppService {
         return;
       }
 
+      const tickerChangePercent =
+        (Math.abs(ticker.close - lastPrice) / lastPrice) * 100;
+
       if (ticker.close > ticker.open && ticker.close > lastPrice) {
+        firstPrice = ticker.close;
+
+        if (tickerChangePercent > 1) {
+          percentCanShortWin += 33;
+        } else {
+          percentCanShortWin += 30;
+        }
+
         ++countGreenTickers;
         countRedTickers = 0;
+        percentCanLongWin = 0;
       }
 
       if (ticker.close < ticker.open && ticker.close < lastPrice) {
+        firstPrice = ticker.close;
+
+        if (tickerChangePercent > 1) {
+          percentCanLongWin += 33;
+        } else {
+          percentCanLongWin += 30;
+        }
+
         ++countRedTickers;
         countGreenTickers = 0;
+        percentCanShortWin = 0;
       }
 
       lastPrice = ticker.close;
     });
 
     const changePercent = (Math.abs(firstPrice - lastPrice) / firstPrice) * 100;
-    if (shouldOrder && changePercent > 1) {
+    if (shouldOrder && changePercent > 1.5) {
       console.log(
         {
           firstPrice,
@@ -104,7 +128,10 @@ export class AppService {
         'DatLenhNe',
       );
 
-      if (countRedTickers >= 3 || countGreenTickers >= 3) {
+      if (
+        (countRedTickers >= 3 && percentCanLongWin > 95) ||
+        (countGreenTickers >= 3 && percentCanShortWin > 95)
+      ) {
         const tpRatio = 0.0035;
         const tlRatio = 0.2;
 
