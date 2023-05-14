@@ -105,14 +105,23 @@ export class AppService {
       );
 
       if (countRedTickers >= 3 || countGreenTickers >= 3) {
-        const stopSlotPrice = lastPrice * 0.98;
-        const takeProfitPrice = lastPrice * 1.0035;
+        const tpRatio = 0.0035;
+        const tlRatio = 0.2;
+
+        const stopSlotPrice =
+          direction === Direction.Buy
+            ? lastPrice * (1 - tlRatio)
+            : lastPrice * (1 + tlRatio);
+        const takeProfitPrice =
+          direction === Direction.Buy
+            ? lastPrice * (1 + tpRatio)
+            : lastPrice * (1 - tpRatio);
 
         return this.exchange.submitOrder({
           category: 'linear',
           symbol,
           isLeverage: 1,
-          side: 'Buy',
+          side: direction,
           orderType: 'Market',
           qty: '0.001',
           stopLoss: stopSlotPrice.toFixed(0),
