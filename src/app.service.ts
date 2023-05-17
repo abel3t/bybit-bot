@@ -12,7 +12,7 @@ export class AppService {
       apiKey: apiKey,
       secret: secretKey,
     });
-    this.exchange.setSandboxMode(true);
+    // this.exchange.setSandboxMode(true);
 
     console.log({
       key: apiKey,
