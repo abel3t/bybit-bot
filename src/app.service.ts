@@ -41,6 +41,8 @@ export class AppService {
 
     const { BNB: bnbBalance, USDT: usdtBalance } = await this.getBalance();
 
+    return this.getBalance();
+
     if (type === 'buy') {
       console.log(
         moment().format() + ': ' + 'Buy BNB at price',
