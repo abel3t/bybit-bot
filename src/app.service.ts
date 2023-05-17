@@ -13,19 +13,18 @@ export class AppService {
       secret: secretKey,
     });
     // this.exchange.setSandboxMode(true);
-
-    console.log({
-      key: apiKey,
-      secret: secretKey,
-    });
   }
 
   exchange: any;
 
-  async getBalance() {
-    const result = await this.exchange.fetchBalance();
-
-    return result.total;
+  getBalance() {
+    return this.exchange
+      .fetchBalance()
+      .then((result) => result.total)
+      .catch((error) => {
+        console.log(error);
+        return 0;
+      });
   }
 
   private async getCurrentPrice() {
