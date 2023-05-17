@@ -1,331 +1,78 @@
 import { Injectable } from '@nestjs/common';
-import * as moment from 'moment';
-import { Cron } from '@nestjs/schedule';
-import { RestClientV5 } from 'bybit-api';
+import { binance } from 'ccxt';
+import moment from 'moment';
 
 @Injectable()
 export class AppService {
   constructor() {
     const apiKey = process.env.API_KEY;
     const secretKey = process.env.SECRET_KEY;
-    const useTestnet = true;
 
-    this.exchange = new RestClientV5({
+    this.exchange = new binance({
+      apiKey: apiKey,
+      secret: secretKey,
+    });
+    this.exchange.setSandboxMode(true);
+
+    console.log({
       key: apiKey,
       secret: secretKey,
-      testnet: useTestnet,
     });
   }
 
   exchange: any;
 
-  getBalance() {
-    return this.exchange.getAllCoinsBalance({
-      accountType: 'CONTRACT',
-      coin: 'USDT',
-    });
+  async getBalance() {
+    const result = await this.exchange.fetchBalance();
+
+    return result.total;
   }
 
-  @Cron('0 */15 * * * *')
-  async getHello() {
-    const symbol = 'BTCUSDT';
+  private async getCurrentPrice() {
+    const result = await this.exchange.fetchLastPrices(['BNBUSDT']);
 
-    enum Direction {
-      Buy = 'Buy',
-      Sell = 'Sell',
-    }
-
-    const tickers = (
-      await this.exchange.getKline({
-        category: 'linear',
-        symbol,
-        interval: '15',
-        // start?: number;
-        // end?: number;
-        limit: 7,
-      })
-    )?.result?.list;
-
-    let countRedTickers = 0;
-    let countGreenTickers = 0;
-    let firstPrice;
-    let lastPrice;
-    let direction;
-
-    tickers.sort((a, b) => (a[0] > b[0] ? 1 : -1));
-
-    let shouldOrder = false;
-
-    let percentCanLongWin = 0;
-    let percentCanShortWin = 0;
-
-    tickers.forEach((x, i) => {
-      const ticker = formatOHLCV(x);
-      if (i === 0) {
-        firstPrice = ticker.close;
-        lastPrice = ticker.close;
-        return;
-      }
-
-      if (i === tickers.length - 1) {
-        if (ticker.close > lastPrice && countGreenTickers >= 3) {
-          shouldOrder = true;
-        }
-
-        if (ticker.close < lastPrice && countRedTickers >= 3) {
-          shouldOrder = true;
-        }
-
-        direction = ticker.close > lastPrice ? Direction.Sell : Direction.Buy;
-        return;
-      }
-
-      const tickerChangePercent =
-        (Math.abs(ticker.close - lastPrice) / lastPrice) * 100;
-
-      if (ticker.close > ticker.open && ticker.close > lastPrice) {
-        if (!countGreenTickers) {
-          firstPrice = ticker.close;
-        }
-
-        if (tickerChangePercent > 1) {
-          percentCanShortWin += 33;
-        } else {
-          percentCanShortWin += 30;
-        }
-
-        ++countGreenTickers;
-        countRedTickers = 0;
-        percentCanLongWin = 0;
-      }
-
-      if (ticker.close < ticker.open && ticker.close < lastPrice) {
-        if (!countRedTickers) {
-          firstPrice = ticker.close;
-        }
-
-        if (tickerChangePercent > 1) {
-          percentCanLongWin += 33;
-        } else {
-          percentCanLongWin += 30;
-        }
-
-        ++countRedTickers;
-        countGreenTickers = 0;
-        percentCanShortWin = 0;
-      }
-
-      lastPrice = ticker.close;
-    });
-
-    const changePercent = (Math.abs(firstPrice - lastPrice) / firstPrice) * 100;
-    if (shouldOrder && changePercent > 1.5) {
-      console.log(
-        {
-          firstPrice,
-          lastPrice,
-          countRedTickers,
-          countGreenTickers,
-          direction,
-          percent: changePercent,
-        },
-        'DatLenhNe',
-      );
-
-      if (
-        (countRedTickers >= 3 && percentCanLongWin > 95) ||
-        (countGreenTickers >= 3 && percentCanShortWin > 95)
-      ) {
-        const tpRatio = 0.0035;
-        const tlRatio = 0.2;
-
-        const stopSlotPrice =
-          direction === Direction.Buy
-            ? lastPrice * (1 - tlRatio)
-            : lastPrice * (1 + tlRatio);
-        const takeProfitPrice =
-          direction === Direction.Buy
-            ? lastPrice * (1 + tpRatio)
-            : lastPrice * (1 - tpRatio);
-
-        return this.exchange.submitOrder({
-          category: 'linear',
-          symbol,
-          isLeverage: 1,
-          side: direction,
-          orderType: 'Market',
-          qty: '0.005',
-          stopLoss: stopSlotPrice.toFixed(0),
-          takeProfit: takeProfitPrice.toFixed(0),
-          tpTriggerBy: 'MarkPrice',
-          slTriggerBy: 'MarkPrice',
-        });
-      }
-    } else {
-      console.log('Không đặt lệnh đâu!');
-      console.log({
-        firstPrice,
-        lastPrice,
-        countRedTickers,
-        countGreenTickers,
-        direction,
-        percent: changePercent,
-      });
-    }
-
-    return {
-      firstPrice,
-      lastPrice,
-      countRedTickers,
-      countGreenTickers,
-      direction,
-      percent: changePercent,
-    };
+    return result['BNB/USDT']?.price;
   }
 
-  @Cron('0 */15 * * * *')
-  async catchHammerTicker() {
-    const symbol = 'BTCUSDT';
+  async handleWebhook(type: string) {
+    const currentBnbPrice = await this.getCurrentPrice();
+    const lockedAmount = 3;
+    const lotSize = 0.001;
 
-    enum TickerType {
-      Red = 'Red',
-      Green = 'Green',
-    }
-    enum Direction {
-      Buy = 'Buy',
-      Sell = 'Sell',
-    }
+    const { BNB: bnbBalance, USDT: usdtBalance } = await this.getBalance();
 
-    const tickers = (
-      await this.exchange.getKline({
-        category: 'linear',
-        symbol,
-        interval: '15',
-        // start?: number;
-        // end?: number;
-        limit: 2,
-      })
-    )?.result?.list;
-
-    tickers.sort((a, b) => (a[0] > b[0] ? 1 : -1));
-
-    const [ticker, currentTicker] = tickers.map((x) => formatOHLCV(x));
-
-    const tickerType =
-      ticker.open < ticker.close ? TickerType.Green : TickerType.Red;
-    const currentTickerType =
-      currentTicker.open < currentTicker.close
-        ? TickerType.Green
-        : TickerType.Red;
-
-    if (tickerType === TickerType.Red) {
-      const percentHigherShadow =
-        ((ticker.high - ticker.open) / ticker.open) * 100;
-      const percentLowerShadow =
-        ((ticker.close - ticker.low) / ticker.open) * 100;
-
-      if (
-        percentHigherShadow < 0.03 &&
-        percentLowerShadow > 0.55 &&
-        currentTickerType === TickerType.Green
-      ) {
-        const stopSlotPrice = ticker.low;
-        const tpRatio = 0.005;
-
-        const takeProfitPrice = ticker.close * (1 + tpRatio);
-
-        console.log(
-          {
-            percentHigherShadow,
-            percentLowerShadow,
-            currentTickerType,
-          },
-          'Order hammer ticker for BUY',
-        );
-
-        return this.exchange.submitOrder({
-          category: 'linear',
-          symbol,
-          isLeverage: 1,
-          side: Direction.Buy,
-          orderType: 'Market',
-          qty: '0.005',
-          stopLoss: stopSlotPrice.toFixed(0),
-          takeProfit: takeProfitPrice.toFixed(0),
-          tpTriggerBy: 'MarkPrice',
-          slTriggerBy: 'MarkPrice',
-        });
-      } else {
-        console.log({
-          percentHigherShadow,
-          percentLowerShadow,
-          currentTickerType,
-        });
-        return {
-          percentHigherShadow,
-          percentLowerShadow,
-          currentTickerType,
-        };
-      }
-    }
-
-    const percentHigherShadow =
-      ((ticker.high - ticker.close) / ticker.open) * 100;
-    const percentLowerShadow = ((ticker.open - ticker.low) / ticker.open) * 100;
-
-    if (
-      percentHigherShadow > 0.55 &&
-      percentLowerShadow > 0.03 &&
-      currentTickerType === TickerType.Red
-    ) {
-      const stopSlotPrice = ticker.high;
-      const tpRatio = 0.005;
-
-      const takeProfitPrice = ticker.close * (1 + tpRatio);
-
+    if (type === 'buy') {
       console.log(
-        {
-          percentHigherShadow,
-          percentLowerShadow,
-          currentTickerType,
-        },
-        'Order hammer ticker for SELL',
+        moment().format() + ': ' + 'Buy BNB at price',
+        currentBnbPrice,
       );
 
-      return this.exchange.submitOrder({
-        category: 'linear',
-        symbol,
-        isLeverage: 1,
-        side: Direction.Sell,
-        orderType: 'Market',
-        qty: '0.005',
-        stopLoss: stopSlotPrice.toFixed(0),
-        takeProfit: takeProfitPrice.toFixed(0),
-        tpTriggerBy: 'MarkPrice',
-        slTriggerBy: 'MarkPrice',
-      });
-    } else {
-      console.log({
-        percentHigherShadow,
-        percentLowerShadow,
-        currentTickerType,
-      });
-      return {
-        percentHigherShadow,
-        percentLowerShadow,
-        currentTickerType,
-      };
+      const bnbAmount = (usdtBalance - lockedAmount) / currentBnbPrice;
+
+      return this.exchange.createOrder(
+        'BNBUSDT',
+        'market',
+        'buy',
+        Math.floor(bnbAmount / lotSize) * lotSize,
+      );
     }
+
+    if (type === 'sell') {
+      const adjustedQuantity = Math.floor(bnbBalance / lotSize) * lotSize;
+
+      console.log(
+        moment().format() + ': ' + 'Sell BNB at price',
+        currentBnbPrice,
+      );
+
+      return this.exchange.createOrder(
+        'BNBUSDT',
+        'market',
+        'sell',
+        adjustedQuantity,
+      );
+    }
+
+    console.log('wrong type');
   }
 }
-
-const formatOHLCV = (price) => {
-  return {
-    timestamp: moment(parseInt(price[0])).format(),
-    open: price[1],
-    high: price[2],
-    low: price[3],
-    close: price[4],
-    volume: price[5],
-  };
-};
