@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { binance } from 'ccxt';
 import moment from 'moment';
 
@@ -22,8 +22,7 @@ export class AppService {
       .fetchBalance()
       .then((result) => result.total)
       .catch((error) => {
-        console.log(error);
-        return 0;
+        throw new BadRequestException(error);
       });
   }
 
