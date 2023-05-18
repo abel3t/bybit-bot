@@ -12,7 +12,7 @@ export class AppController {
   }
 
   @Post('webhook/:type')
-  handleWebhook(@Param('type') type: string) {
-    return this.appService.handleWebhook(type);
+  handleWebhook(@Param('type') type: string, @Body('key') key: string) {
+    return this.appService.handleWebhook(type, key);
   }
 }

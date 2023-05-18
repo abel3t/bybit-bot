@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { binance } from 'ccxt';
 import * as moment from 'moment';
 
@@ -32,7 +36,11 @@ export class AppService {
     return result['BNB/USDT']?.price;
   }
 
-  async handleWebhook(type: string) {
+  async handleWebhook(type: string, key: string) {
+    if (key !== process.env.BOT_SECRET_KEY) {
+      throw new ForbiddenException('Forbidden');
+    }
+
     const currentBnbPrice = await this.getCurrentPrice();
     const lockedAmount = 450;
     const lotSize = 0.001;
@@ -54,6 +62,7 @@ export class AppService {
 
       console.log(timeStringNow + ': ' + 'Buy BNB at price', {
         currentBnbPrice,
+        totalUsd: usdtBalance - lockedAmount,
         bnbAmount,
       });
 
