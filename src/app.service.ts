@@ -42,7 +42,7 @@ export class AppService {
     }
 
     const currentBnbPrice = await this.getCurrentPrice();
-    const lockedAmount = 450;
+    const lockedAmount = 100;
     const lotSize = 0.001;
 
     const timeStringNow = moment()
