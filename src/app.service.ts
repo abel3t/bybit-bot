@@ -39,7 +39,11 @@ export class AppService {
 
     const { BNB: bnbBalance, USDT: usdtBalance } = await this.getBalance();
 
-    return console.log('ok');
+    return console.log(moment().format(), ':', type, {
+      currentBnbPrice,
+      bnbBalance,
+      usdtBalance,
+    });
 
     if (type === 'buy') {
       if (usdtBalance < lockedAmount) {
