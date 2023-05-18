@@ -37,22 +37,25 @@ export class AppService {
     const lockedAmount = 450;
     const lotSize = 0.001;
 
+    const timeStringNow = moment()
+      .utcOffset('+0700')
+      .format('HH:mm DD/MM/YYYY');
+
     const { BNB: bnbBalance, USDT: usdtBalance } = await this.getBalance();
 
     if (type === 'buy') {
       if (usdtBalance < lockedAmount) {
-        console.log(moment().format() + ': ' + 'No USDT for BUY');
+        console.log(timeStringNow + ': ' + 'No USDT for BUY');
 
         return;
       }
 
       const bnbAmount = (usdtBalance - lockedAmount) / currentBnbPrice;
 
-      console.log(
-        moment().format() + ': ' + 'Buy BNB at price',
+      console.log(timeStringNow + ': ' + 'Buy BNB at price', {
         currentBnbPrice,
-        { bnbAmount },
-      );
+        bnbAmount,
+      });
 
       if (process.env.IS_ACTIVE === 'true') {
         return this.exchange.createOrder(
@@ -71,11 +74,11 @@ export class AppService {
       const adjustedQuantity = Math.floor(bnbBalance / lotSize) * lotSize;
 
       if (adjustedQuantity < lotSize) {
-        console.log(moment().format() + ': ' + 'No BNB for SELL');
+        console.log(timeStringNow + ': ' + 'No BNB for SELL');
         return;
       }
 
-      console.log(moment().format() + ': ' + 'Sell BNB at price', {
+      console.log(timeStringNow + ': ' + 'Sell BNB at price', {
         currentBnbPrice,
         bnb: adjustedQuantity,
       });
@@ -94,6 +97,6 @@ export class AppService {
       return { isCreateOrder: false };
     }
 
-    console.log(moment().format() + ': ' + 'wrong type');
+    console.log(timeStringNow + ': ' + 'wrong type');
   }
 }
