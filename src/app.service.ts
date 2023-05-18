@@ -31,9 +31,9 @@ export class AppService {
   }
 
   private async getCurrentPrice() {
-    const result = await this.exchange.fetchLastPrices(['BNBUSDT']);
+    const result = await this.exchange.fetchLastPrices(['BNBBUSD']);
 
-    return result['BNB/USDT']?.price;
+    return result['BNB/BUSD']?.price;
   }
 
   async handleWebhook(type: string, key: string) {
@@ -42,19 +42,19 @@ export class AppService {
     }
 
     const currentBnbPrice = await this.getCurrentPrice();
-    const lockedAmount = 450;
+    const lockedAmount = 3;
     const lotSize = 0.001;
 
     const timeStringNow = moment()
       .utcOffset('+0700')
       .format('HH:mm DD/MM/YYYY');
 
-    const { BNB: bnbBalance, USDT: usdtBalance } = await this.getBalance();
+    const { BNB: bnbBalance, BUSD: usdtBalance } = await this.getBalance();
 
     if (type === 'buy') {
       const totalBuyUsd = usdtBalance - lockedAmount;
       if (totalBuyUsd < lockedAmount) {
-        console.log(timeStringNow + ': ' + 'No USDT for BUY');
+        console.log(timeStringNow + ': ' + 'No BUSD for BUY');
 
         return;
       }
@@ -69,7 +69,7 @@ export class AppService {
 
       if (process.env.IS_ACTIVE === 'true') {
         return this.exchange.createOrder(
-          'BNBUSDT',
+          'BNBBUSD',
           'market',
           'buy',
           Math.floor(bnbAmount / lotSize) * lotSize,
@@ -95,7 +95,7 @@ export class AppService {
 
       if (process.env.IS_ACTIVE === 'true') {
         return this.exchange.createOrder(
-          'BNBUSDT',
+          'BNBBUSD',
           'market',
           'sell',
           adjustedQuantity,
