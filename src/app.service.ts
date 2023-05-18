@@ -52,13 +52,14 @@ export class AppService {
     const { BNB: bnbBalance, USDT: usdtBalance } = await this.getBalance();
 
     if (type === 'buy') {
-      if (usdtBalance < lockedAmount) {
+      const totalBuyUsd = usdtBalance - lockedAmount;
+      if (totalBuyUsd < lockedAmount) {
         console.log(timeStringNow + ': ' + 'No USDT for BUY');
 
         return;
       }
 
-      const bnbAmount = (usdtBalance - lockedAmount) / currentBnbPrice;
+      const bnbAmount = totalBuyUsd / currentBnbPrice;
 
       console.log(timeStringNow + ': ' + 'Buy BNB at price', {
         currentBnbPrice,
