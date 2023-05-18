@@ -42,28 +42,28 @@ export class AppService {
     }
 
     const currentBnbPrice = await this.getCurrentPrice();
-    const lockedAmount = 3;
+    const lockedAmount = 450;
     const lotSize = 0.001;
 
     const timeStringNow = moment()
       .utcOffset('+0700')
       .format('HH:mm DD/MM/YYYY');
 
-    const { BNB: bnbBalance, BUSD: usdtBalance } = await this.getBalance();
+    const { BNB: bnbBalance, BUSD: busdBalance } = await this.getBalance();
 
     if (type === 'buy') {
-      const totalBuyUsd = usdtBalance - lockedAmount;
-      if (totalBuyUsd < lockedAmount) {
+      const totalBusd = busdBalance - lockedAmount;
+      if (totalBusd < lockedAmount) {
         console.log(timeStringNow + ': ' + 'No BUSD for BUY');
 
         return;
       }
 
-      const bnbAmount = totalBuyUsd / currentBnbPrice;
+      const bnbAmount = totalBusd / currentBnbPrice;
 
       console.log(timeStringNow + ': ' + 'Buy BNB at price', {
         currentBnbPrice,
-        totalUsd: usdtBalance - lockedAmount,
+        totalBusd,
         bnbAmount,
       });
 
