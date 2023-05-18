@@ -6,6 +6,11 @@ import axios from 'axios';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
+  @Get('/')
+  root() {
+    return 'Welcome!';
+  }
+
   @Post('webhook/:type')
   handleWebhook(@Param('type') type: string) {
     return this.appService.handleWebhook(type);
