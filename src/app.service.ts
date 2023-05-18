@@ -25,9 +25,7 @@ export class AppService {
     return this.exchange
       .fetchBalance()
       .then((result) => result.total)
-      .catch((error) => {
-        throw new BadRequestException(error);
-      });
+      .catch((error) => error);
   }
 
   private async getCurrentPrice() {
@@ -41,15 +39,27 @@ export class AppService {
       throw new ForbiddenException('Forbidden');
     }
 
-    const currentBnbPrice = await this.getCurrentPrice();
     const lockedAmount = 100;
     const lotSize = 0.001;
-
     const timeStringNow = moment()
       .utcOffset('+0700')
       .format('HH:mm DD/MM/YYYY');
 
+    const currentBnbPrice = await this.getCurrentPrice();
+    if (!currentBnbPrice) {
+      throw new BadRequestException(
+        timeStringNow + ': ',
+        'Can not fetch BNB price',
+      );
+    }
+
     const { BNB: bnbBalance, BUSD: busdBalance } = await this.getBalance();
+    if (!bnbBalance || !busdBalance) {
+      throw new BadRequestException(
+        timeStringNow + ': ',
+        'Can not fetch the balance',
+      );
+    }
 
     if (type === 'buy') {
       const totalBusd = busdBalance - lockedAmount;
