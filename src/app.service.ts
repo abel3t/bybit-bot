@@ -34,14 +34,18 @@ export class AppService {
 
   async handleWebhook(type: string) {
     const currentBnbPrice = await this.getCurrentPrice();
-    const lockedAmount = 3;
+    const lockedAmount = 450;
     const lotSize = 0.001;
 
     const { BNB: bnbBalance, USDT: usdtBalance } = await this.getBalance();
 
-    return this.getBalance();
-
     if (type === 'buy') {
+      if (usdtBalance < lockedAmount) {
+        console.log(moment().format() + ': ' + 'No USDT for BUY');
+
+        return;
+      }
+
       console.log(
         moment().format() + ': ' + 'Buy BNB at price',
         currentBnbPrice,
@@ -60,6 +64,11 @@ export class AppService {
     if (type === 'sell') {
       const adjustedQuantity = Math.floor(bnbBalance / lotSize) * lotSize;
 
+      if (adjustedQuantity < lotSize) {
+        console.log(moment().format() + ': ' + 'No BNB for SELL');
+        return;
+      }
+
       console.log(
         moment().format() + ': ' + 'Sell BNB at price',
         currentBnbPrice,
@@ -73,6 +82,6 @@ export class AppService {
       );
     }
 
-    console.log('wrong type');
+    console.log(moment().format() + ': ' + 'wrong type');
   }
 }
