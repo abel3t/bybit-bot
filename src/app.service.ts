@@ -39,6 +39,8 @@ export class AppService {
 
     const { BNB: bnbBalance, USDT: usdtBalance } = await this.getBalance();
 
+    return console.log('ok');
+
     if (type === 'buy') {
       if (usdtBalance < lockedAmount) {
         console.log(moment().format() + ': ' + 'No USDT for BUY');
