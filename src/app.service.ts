@@ -62,6 +62,9 @@ export class AppService {
           Math.floor(bnbAmount / lotSize) * lotSize,
         );
       }
+
+      console.log('Just for test!!!');
+      return { isCreateOrder: false };
     }
 
     if (type === 'sell') {
@@ -85,6 +88,10 @@ export class AppService {
           adjustedQuantity,
         );
       }
+
+      console.log('Just for test!!!');
+
+      return { isCreateOrder: false };
     }
 
     console.log(moment().format() + ': ' + 'wrong type');
