@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { binance } from 'ccxt';
-import moment from 'moment';
+import * as moment from 'moment';
 
 @Injectable()
 export class AppService {
