@@ -86,26 +86,26 @@ export class AppService {
       }
 
       const bnbAmount = buySize / currentBnbPrice;
+      const actualBnbAmount = Math.floor(bnbAmount / lotSize) * lotSize;
+      const ratio = 0.01; // 1%
+      const tpPrice = Math.floor((currentBnbPrice * (1 + ratio)) / 0.1) * 0.1; // round price
 
       console.log(timeStringNow + ': ' + 'Buy BNB at price', {
         currentBnbPrice,
         buySize,
-        bnbAmount,
+        bnbAmount: actualBnbAmount,
+        tpPrice,
       });
 
       this.previousBuyPrice = currentBuyPrice;
 
       if (process.env.IS_ACTIVE === 'true') {
-        const actualBnbAmount = Math.floor(bnbAmount / lotSize) * lotSize;
         const buyOrder = await this.exchange.createOrder(
           'BNBBUSD',
           'market',
           'buy',
           actualBnbAmount,
         );
-
-        const ratio = 0.01; // 1%
-        const tpPrice = Math.floor((currentBnbPrice * (1 + ratio)) / 0.1) * 0.1; // round price
 
         const sellOrder = await this.exchange.createOrder(
           'BNBBUSD',
