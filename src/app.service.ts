@@ -8,11 +8,14 @@ import * as moment from 'moment';
 
 @Injectable()
 export class AppService {
-  private latestBuyPrice;
+  private previousBuyPrice;
 
   constructor() {
     const apiKey = process.env.API_KEY;
     const secretKey = process.env.SECRET_KEY;
+
+    this.previousBuyPrice =
+      parseInt(process.env.PREVIOUS_BUY_PRICE) || undefined;
 
     this.exchange = new binance({
       apiKey: apiKey,
@@ -40,9 +43,9 @@ export class AppService {
       throw new ForbiddenException('Forbidden');
     }
 
-    const lockedAmount = 3;
+    const lockedAmount = parseInt(process.env.LOCKED_SIZE) || 3;
+    const buySize = parseInt(process.env.BUY_SIZE) || 10;
     const lotSize = 0.001;
-    const buySize = 20;
 
     const timeStringNow = moment()
       .utcOffset('+0700')
@@ -56,7 +59,7 @@ export class AppService {
       );
     }
 
-    const currentPrice = Math.floor(currentBnbPrice);
+    const currentBuyPrice = Math.floor(currentBnbPrice);
 
     const { BNB: bnbBalance, BUSD: busdBalance } = await this.getBalance();
     if (!bnbBalance || !busdBalance) {
@@ -67,7 +70,7 @@ export class AppService {
     }
 
     if (type === 'buy') {
-      if (currentPrice === this.latestBuyPrice) {
+      if (currentBuyPrice === this.previousBuyPrice) {
         console.log(
           timeStringNow + ': ' + 'Bought BNB at price',
           currentBnbPrice,
@@ -90,7 +93,7 @@ export class AppService {
         bnbAmount,
       });
 
-      this.latestBuyPrice = currentPrice;
+      this.previousBuyPrice = currentBuyPrice;
 
       if (process.env.IS_ACTIVE === 'true') {
         const actualBnbAmount = Math.floor(bnbAmount / lotSize) * lotSize;
