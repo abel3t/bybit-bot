@@ -6,6 +6,31 @@ import {
 import { binance } from 'ccxt';
 import * as moment from 'moment';
 
+type Slot = {
+  type: SlotType;
+  status: SlotStatus;
+  time?: Date | string;
+  price?: number;
+  bnbAmount?: number;
+  busdAmount: number;
+  target?: number;
+};
+
+enum SlotStatus {
+  Free = 'Free',
+  Locked = 'Locked',
+}
+
+enum SlotType {
+  Low = 'Low',
+  Middle = 'Middle',
+  High = 'High',
+}
+
+type Data = {
+  slots: Slot[];
+};
+
 @Injectable()
 export class AppService {
   constructor() {
@@ -16,7 +41,6 @@ export class AppService {
       apiKey: apiKey,
       secret: secretKey,
     });
-    // this.exchange.setSandboxMode(true);
   }
 
   exchange: any;
@@ -34,10 +58,40 @@ export class AppService {
     return result['BNB/BUSD']?.price;
   }
 
+  private async initSlots(busdAmount: number) {
+    const busdPerSlot = Math.floor(busdAmount / 3);
+    data.slots.push(
+      ...[
+        {
+          type: SlotType.Low,
+          status: SlotStatus.Free,
+          bnbAmount: 0,
+          busdAmount: busdPerSlot,
+        },
+        {
+          type: SlotType.Middle,
+          status: SlotStatus.Free,
+          bnbAmount: 0,
+          busdAmount: busdPerSlot,
+        },
+        {
+          type: SlotType.High,
+          status: SlotStatus.Free,
+          bnbAmount: 0,
+          busdAmount: busdPerSlot,
+        },
+      ],
+    );
+
+    await db.write();
+  }
+
   async handleWebhook(type: string, key: string) {
     if (key !== process.env.BOT_SECRET_KEY) {
       throw new ForbiddenException('Forbidden');
     }
+
+    await db.read();
 
     const lockedAmount = 100;
     const lotSize = 0.001;
@@ -59,6 +113,10 @@ export class AppService {
         timeStringNow + ': ',
         'Can not fetch the balance',
       );
+    }
+
+    const slots = db.data?.slots;
+    if (!slots?.length) {
     }
 
     if (type === 'buy') {
