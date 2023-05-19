@@ -6,33 +6,10 @@ import {
 import { binance } from 'ccxt';
 import * as moment from 'moment';
 
-type Slot = {
-  type: SlotType;
-  status: SlotStatus;
-  time?: Date | string;
-  price?: number;
-  bnbAmount?: number;
-  busdAmount: number;
-  target?: number;
-};
-
-enum SlotStatus {
-  Free = 'Free',
-  Locked = 'Locked',
-}
-
-enum SlotType {
-  Low = 'Low',
-  Middle = 'Middle',
-  High = 'High',
-}
-
-type Data = {
-  slots: Slot[];
-};
-
 @Injectable()
 export class AppService {
+  private latestBuyPrice;
+
   constructor() {
     const apiKey = process.env.API_KEY;
     const secretKey = process.env.SECRET_KEY;
@@ -58,43 +35,15 @@ export class AppService {
     return result['BNB/BUSD']?.price;
   }
 
-  private async initSlots(busdAmount: number) {
-    const busdPerSlot = Math.floor(busdAmount / 3);
-    data.slots.push(
-      ...[
-        {
-          type: SlotType.Low,
-          status: SlotStatus.Free,
-          bnbAmount: 0,
-          busdAmount: busdPerSlot,
-        },
-        {
-          type: SlotType.Middle,
-          status: SlotStatus.Free,
-          bnbAmount: 0,
-          busdAmount: busdPerSlot,
-        },
-        {
-          type: SlotType.High,
-          status: SlotStatus.Free,
-          bnbAmount: 0,
-          busdAmount: busdPerSlot,
-        },
-      ],
-    );
-
-    await db.write();
-  }
-
   async handleWebhook(type: string, key: string) {
     if (key !== process.env.BOT_SECRET_KEY) {
       throw new ForbiddenException('Forbidden');
     }
 
-    await db.read();
-
-    const lockedAmount = 100;
+    const lockedAmount = 3;
     const lotSize = 0.001;
+    const buySize = 20;
+
     const timeStringNow = moment()
       .utcOffset('+0700')
       .format('HH:mm DD/MM/YYYY');
@@ -107,6 +56,8 @@ export class AppService {
       );
     }
 
+    const currentPrice = Math.floor(currentBnbPrice);
+
     const { BNB: bnbBalance, BUSD: busdBalance } = await this.getBalance();
     if (!bnbBalance || !busdBalance) {
       throw new BadRequestException(
@@ -115,33 +66,56 @@ export class AppService {
       );
     }
 
-    const slots = db.data?.slots;
-    if (!slots?.length) {
-    }
-
     if (type === 'buy') {
+      if (currentPrice === this.latestBuyPrice) {
+        console.log(
+          timeStringNow + ': ' + 'Bought BNB at price',
+          currentBnbPrice,
+        );
+        return;
+      }
+
       const totalBusd = busdBalance - lockedAmount;
-      if (totalBusd < lockedAmount) {
+      if (totalBusd < buySize) {
         console.log(timeStringNow + ': ' + 'No BUSD for BUY');
 
         return;
       }
 
-      const bnbAmount = totalBusd / currentBnbPrice;
+      const bnbAmount = buySize / currentBnbPrice;
 
       console.log(timeStringNow + ': ' + 'Buy BNB at price', {
         currentBnbPrice,
-        totalBusd,
+        buySize,
         bnbAmount,
       });
 
+      this.latestBuyPrice = currentPrice;
+
       if (process.env.IS_ACTIVE === 'true') {
-        return this.exchange.createOrder(
+        const actualBnbAmount = Math.floor(bnbAmount / lotSize) * lotSize;
+        const buyOrder = await this.exchange.createOrder(
           'BNBBUSD',
           'market',
           'buy',
-          Math.floor(bnbAmount / lotSize) * lotSize,
+          actualBnbAmount,
         );
+
+        const ratio = 0.01; // 1%
+        const tpPrice = Math.floor((currentBnbPrice * (1 + ratio)) / 0.1) * 0.1; // round price
+
+        const sellOrder = await this.exchange.createOrder(
+          'BNBBUSD',
+          'limit',
+          'sell',
+          actualBnbAmount,
+          tpPrice,
+        );
+
+        return {
+          buyOrder,
+          sellOrder,
+        };
       }
 
       console.log('Just for test!!!');
