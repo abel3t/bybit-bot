@@ -9,6 +9,7 @@ import * as moment from 'moment';
 @Injectable()
 export class AppService {
   private previousBuyPrice;
+  private samePriceTimes = 0;
 
   constructor() {
     const apiKey = process.env.API_KEY;
@@ -70,12 +71,23 @@ export class AppService {
     }
 
     if (type === 'buy') {
-      if (currentBuyPrice === this.previousBuyPrice) {
+      if (
+        currentBuyPrice === this.previousBuyPrice &&
+        this.samePriceTimes >= 3
+      ) {
         console.log(
           timeStringNow + ': ' + 'Bought BNB at price',
           currentBnbPrice,
+          this.samePriceTimes,
+          'times',
         );
         return;
+      }
+
+      if (currentBuyPrice === this.previousBuyPrice) {
+        ++this.samePriceTimes;
+      } else {
+        this.samePriceTimes = 0;
       }
 
       const totalBusd = busdBalance - lockedAmount;
