@@ -62,6 +62,8 @@ export class AppService {
     );
 
     const safeRatio = parseFloat(process.env.SAFE_RATIO) || 0.2;
+    const buySize = parseInt(process.env.BUY_SIZE) || 10;
+
     if (decreaseRatio >= safeRatio) {
       const ratio = parseFloat(process.env.TP_RATIO) || 0.0075;
 
@@ -83,7 +85,12 @@ export class AppService {
         (currentBnbPrice * (1 + tpRatio)).toFixed(1),
       );
 
-      await this.handleWebhook('buy', process.env.BOT_SECRET_KEY, tpRatio);
+      await this.handleWebhook(
+        'buy',
+        process.env.BOT_SECRET_KEY,
+        buySize * 1.5,
+        tpRatio,
+      );
     }
 
     if (currentBnbPrice > this.safeStrategyTpPrice) {
@@ -91,13 +98,18 @@ export class AppService {
     }
   }
 
-  async handleWebhook(type: string, key: string, tpRatio?: number) {
+  async handleWebhook(
+    type: string,
+    key: string,
+    size?: number,
+    tpRatio?: number,
+  ) {
     if (key !== process.env.BOT_SECRET_KEY) {
       throw new ForbiddenException('Forbidden');
     }
 
     const lockedAmount = parseInt(process.env.LOCKED_SIZE) || 3;
-    const buySize = parseInt(process.env.BUY_SIZE) || 10;
+    const buySize = size || parseInt(process.env.BUY_SIZE) || 10;
     const lotSize = 0.001;
 
     const timeStringNow = moment()
