@@ -74,7 +74,7 @@ export class AppService {
       console.log(
         timeStringNow,
         ':',
-        'Trigger BUY webhook buy safeStrategyCron at price',
+        'Trigger BUY webhook by safeStrategyCron at price',
         currentBnbPrice,
         'with decrease ratio:',
         decreaseRatio,
