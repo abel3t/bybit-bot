@@ -78,7 +78,12 @@ export class AppService {
         decreaseRatio,
       );
 
-      await this.handleWebhook('buy', process.env.BOT_SECRET_KEY, ratio * 1.5);
+      const tpRatio = ratio * 1.5;
+      this.safeStrategyTpPrice = parseFloat(
+        (currentBnbPrice * (1 + tpRatio)).toFixed(1),
+      );
+
+      await this.handleWebhook('buy', process.env.BOT_SECRET_KEY, tpRatio);
     }
 
     if (currentBnbPrice > this.safeStrategyTpPrice) {
@@ -154,6 +159,7 @@ export class AppService {
         buySize,
         bnbAmount: actualBnbAmount,
         tpPrice,
+        ratio,
       });
 
       this.previousBuyPrice = currentBuyPrice;
