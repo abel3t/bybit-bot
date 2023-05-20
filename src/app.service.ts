@@ -41,7 +41,7 @@ export class AppService {
     return result['BNB/BUSD']?.price;
   }
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_30_SECONDS)
   async safeStrategyCron() {
     const currentBnbPrice = await this.getCurrentPrice();
 
