@@ -99,7 +99,7 @@ export class AppService {
 
       const bnbAmount = buySize / currentBnbPrice;
       const actualBnbAmount = Math.floor(bnbAmount / lotSize) * lotSize;
-      const ratio = 0.007; // 0.7%
+      const ratio = parseFloat(process.env.TP_RATIO) || 0.0075;
       const tpPrice = parseFloat((currentBnbPrice * (1 + ratio)).toFixed(1)); // round price
 
       console.log(timeStringNow + ': ' + 'Buy BNB at price', {
