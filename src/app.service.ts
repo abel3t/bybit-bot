@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { binance } from 'ccxt';
 import * as moment from 'moment';
 
@@ -10,6 +11,7 @@ import * as moment from 'moment';
 export class AppService {
   private previousBuyPrice;
   private samePriceTimes = 0;
+  private safeStrategyTpPrice;
 
   constructor() {
     const apiKey = process.env.API_KEY;
@@ -39,7 +41,52 @@ export class AppService {
     return result['BNB/BUSD']?.price;
   }
 
-  async handleWebhook(type: string, key: string) {
+  @Cron(CronExpression.EVERY_MINUTE)
+  async safeStrategyCron() {
+    const currentBnbPrice = await this.getCurrentPrice();
+
+    if (
+      this.safeStrategyTpPrice ||
+      !this.previousBuyPrice ||
+      currentBnbPrice > this.previousBuyPrice
+    ) {
+      return;
+    }
+
+    const decreaseRatio = parseFloat(
+      (
+        (Math.abs(currentBnbPrice - this.previousBuyPrice) /
+          this.previousBuyPrice) *
+        100
+      ).toFixed(1),
+    );
+
+    const safeRatio = parseFloat(process.env.SAFE_RATIO) || 0.2;
+    if (decreaseRatio >= safeRatio) {
+      const ratio = parseFloat(process.env.TP_RATIO) || 0.0075;
+
+      const timeStringNow = moment()
+        .utcOffset('+0700')
+        .format('HH:mm DD/MM/YYYY');
+
+      console.log(
+        timeStringNow,
+        ':',
+        'Trigger BUY webhook buy safeStrategyCron at price',
+        currentBnbPrice,
+        'with decrease ratio:',
+        decreaseRatio,
+      );
+
+      await this.handleWebhook('buy', process.env.BOT_SECRET_KEY, ratio * 1.5);
+    }
+
+    if (currentBnbPrice > this.safeStrategyTpPrice) {
+      this.safeStrategyTpPrice = undefined;
+    }
+  }
+
+  async handleWebhook(type: string, key: string, tpRatio?: number) {
     if (key !== process.env.BOT_SECRET_KEY) {
       throw new ForbiddenException('Forbidden');
     }
@@ -99,7 +146,7 @@ export class AppService {
 
       const bnbAmount = buySize / currentBnbPrice;
       const actualBnbAmount = Math.floor(bnbAmount / lotSize) * lotSize;
-      const ratio = parseFloat(process.env.TP_RATIO) || 0.0075;
+      const ratio = tpRatio || parseFloat(process.env.TP_RATIO) || 0.0075;
       const tpPrice = parseFloat((currentBnbPrice * (1 + ratio)).toFixed(1)); // round price
 
       console.log(timeStringNow + ': ' + 'Buy BNB at price', {
