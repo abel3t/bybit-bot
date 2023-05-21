@@ -11,8 +11,8 @@ export class AppController {
     return 'Welcome!';
   }
 
-  @Post('webhook/:type')
-  handleWebhook(@Param('type') type: string, @Body('key') key: string) {
-    return this.appService.handleWebhook(type, key);
+  @Post('webhook/buy/:symbol')
+  handleWebhook(@Param('symbol') symbol: string, @Body('key') key: string) {
+    return this.appService.handleWebhook(symbol, key);
   }
 }
