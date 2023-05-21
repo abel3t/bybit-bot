@@ -3,7 +3,6 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
 import { binance } from 'ccxt';
 import * as moment from 'moment';
 
@@ -11,7 +10,6 @@ import * as moment from 'moment';
 export class AppService {
   private previousBuyPrice;
   private samePriceTimes = 0;
-  private safeStrategyTpPrice;
 
   constructor() {
     const apiKey = process.env.API_KEY;
@@ -36,66 +34,9 @@ export class AppService {
   }
 
   private async getCurrentPrice() {
-    const result = await this.exchange.fetchLastPrices(['BNBBUSD']);
+    const result = await this.exchange.fetchLastPrices(['BTCBUSD']);
 
-    return result['BNB/BUSD']?.price;
-  }
-
-  @Cron(CronExpression.EVERY_30_SECONDS)
-  async safeStrategyCron() {
-    const currentBnbPrice = await this.getCurrentPrice();
-
-    if (
-      this.safeStrategyTpPrice ||
-      !this.previousBuyPrice ||
-      currentBnbPrice > this.previousBuyPrice
-    ) {
-      return;
-    }
-
-    const decreaseRatio = parseFloat(
-      (
-        (Math.abs(currentBnbPrice - this.previousBuyPrice) /
-          this.previousBuyPrice) *
-        100
-      ).toFixed(1),
-    );
-
-    const safeRatio = parseFloat(process.env.SAFE_RATIO) || 0.2;
-    const buySize = parseInt(process.env.BUY_SIZE) || 10;
-
-    if (decreaseRatio >= safeRatio) {
-      const ratio = parseFloat(process.env.TP_RATIO) || 0.0075;
-
-      const timeStringNow = moment()
-        .utcOffset('+0700')
-        .format('HH:mm DD/MM/YYYY');
-
-      console.log(
-        timeStringNow,
-        ':',
-        'Trigger BUY webhook by safeStrategyCron at price',
-        currentBnbPrice,
-        'with decrease ratio:',
-        decreaseRatio,
-      );
-
-      const tpRatio = ratio * 1.5;
-      this.safeStrategyTpPrice = parseFloat(
-        (currentBnbPrice * (1 + tpRatio)).toFixed(1),
-      );
-
-      await this.handleWebhook(
-        'buy',
-        process.env.BOT_SECRET_KEY,
-        buySize * 1.5,
-        tpRatio,
-      );
-    }
-
-    if (currentBnbPrice > this.safeStrategyTpPrice) {
-      this.safeStrategyTpPrice = undefined;
-    }
+    return result['BTC/BUSD']?.price;
   }
 
   async handleWebhook(
@@ -116,18 +57,18 @@ export class AppService {
       .utcOffset('+0700')
       .format('HH:mm DD/MM/YYYY');
 
-    const currentBnbPrice = await this.getCurrentPrice();
-    if (!currentBnbPrice) {
+    const currentBtcPrice = await this.getCurrentPrice();
+    if (!currentBtcPrice) {
       throw new BadRequestException(
         timeStringNow + ': ',
-        'Can not fetch BNB price',
+        'Can not fetch BTC price',
       );
     }
 
-    const currentBuyPrice = Math.floor(currentBnbPrice);
+    const currentBuyPrice = Math.floor(currentBtcPrice);
 
-    const { BNB: bnbBalance, BUSD: busdBalance } = await this.getBalance();
-    if (!bnbBalance || !busdBalance) {
+    const { BTC: btcBalance, BUSD: busdBalance } = await this.getBalance();
+    if (!btcBalance || !busdBalance) {
       throw new BadRequestException(
         timeStringNow + ': ',
         'Can not fetch the balance',
@@ -140,8 +81,8 @@ export class AppService {
         this.samePriceTimes >= 3
       ) {
         console.log(
-          timeStringNow + ': ' + 'Bought BNB at price',
-          currentBnbPrice,
+          timeStringNow + ': ' + 'Bought BTC at price',
+          currentBtcPrice,
           this.samePriceTimes,
           'times',
         );
@@ -161,41 +102,26 @@ export class AppService {
         return;
       }
 
-      const bnbAmount = buySize / currentBnbPrice;
-      const actualBnbAmount = Math.floor(bnbAmount / lotSize) * lotSize;
+      const btcAmount = buySize / currentBtcPrice;
+      const actualBtcAmount = Math.floor(btcAmount / lotSize) * lotSize;
       const ratio = tpRatio || parseFloat(process.env.TP_RATIO) || 0.0075;
-      const tpPrice = parseFloat((currentBnbPrice * (1 + ratio)).toFixed(1)); // round price
 
-      console.log(timeStringNow + ': ' + 'Buy BNB at price', {
-        currentBnbPrice,
+      console.log(timeStringNow + ': ' + 'Buy BTC at price', {
+        currentBtcPrice,
         buySize,
-        bnbAmount: actualBnbAmount,
-        tpPrice,
+        btcAmount: actualBtcAmount,
         ratio,
       });
 
       this.previousBuyPrice = currentBuyPrice;
 
       if (process.env.IS_ACTIVE === 'true') {
-        const buyOrder = await this.exchange.createOrder(
-          'BNBBUSD',
+        return this.exchange.createOrder(
+          'BTCBUSD',
           'market',
           'buy',
-          actualBnbAmount,
+          actualBtcAmount,
         );
-
-        const sellOrder = await this.exchange.createOrder(
-          'BNBBUSD',
-          'limit',
-          'sell',
-          actualBnbAmount,
-          tpPrice,
-        );
-
-        return {
-          buyOrder,
-          sellOrder,
-        };
       }
 
       console.log('Just for test!!!');
@@ -203,21 +129,21 @@ export class AppService {
     }
 
     if (type === 'sell') {
-      const adjustedQuantity = Math.floor(bnbBalance / lotSize) * lotSize;
+      const adjustedQuantity = Math.floor(btcBalance / lotSize) * lotSize;
 
       if (adjustedQuantity < lotSize) {
-        console.log(timeStringNow + ': ' + 'No BNB for SELL');
+        console.log(timeStringNow + ': ' + 'No BTC for SELL');
         return;
       }
 
-      console.log(timeStringNow + ': ' + 'Sell BNB at price', {
-        currentBnbPrice,
-        bnb: adjustedQuantity,
+      console.log(timeStringNow + ': ' + 'Sell BTC at price', {
+        currentBtcPrice,
+        btc: adjustedQuantity,
       });
 
       if (process.env.IS_ACTIVE === 'true') {
         return this.exchange.createOrder(
-          'BNBBUSD',
+          'BTCBUSD',
           'market',
           'sell',
           adjustedQuantity,
