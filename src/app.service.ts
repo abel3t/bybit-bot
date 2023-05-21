@@ -51,7 +51,7 @@ export class AppService {
 
     const lockedAmount = parseInt(process.env.LOCKED_SIZE) || 3;
     const buySize = size || parseInt(process.env.BUY_SIZE) || 10;
-    const lotSize = 0.001;
+    const lotSize = 0.0001;
 
     const timeStringNow = moment()
       .utcOffset('+0700')
