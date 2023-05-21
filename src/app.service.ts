@@ -97,7 +97,7 @@ export class AppService {
       }
 
       case ethSymbol: {
-        return this.byCoin(ethSymbol, 4);
+        return this.byCoin(ethSymbol, 3);
       }
 
       case bnbSymbol: {
