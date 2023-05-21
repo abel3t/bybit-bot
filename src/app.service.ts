@@ -44,7 +44,7 @@ export class AppService {
       .utcOffset('+0700')
       .format('HH:mm DD/MM/YYYY');
 
-    console.log(timeStringNow, ':', message, options);
+    console.log(timeStringNow, ':', message, options || '');
   }
 
   async byCoin(symbol: string, lotSize: number) {
@@ -58,7 +58,9 @@ export class AppService {
     const btcAmount = buySize / currentPrice;
     const actualAmount = Math.floor(btcAmount / lotSize) * lotSize;
 
-    this.logMessage(`Buy ${symbol} at ${currentPrice} with ${actualAmount}`);
+    this.logMessage(
+      `Buy ${symbol} at ${currentPrice}.\nAmount: ${actualAmount}`,
+    );
 
     if (process.env.IS_ACTIVE === 'true') {
       return this.exchange.createOrder(symbol, 'market', 'buy', actualAmount);
