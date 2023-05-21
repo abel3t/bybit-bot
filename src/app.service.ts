@@ -30,7 +30,13 @@ export class AppService {
   private async getCurrentPrice(symbol: string): Promise<number> {
     const result = await this.exchange.fetchLastPrices([symbol]);
 
-    return result?.[symbol]?.price || 0;
+    const PriceSymbol = {
+      BTCBUSD: 'BTC/BUSD',
+      ETHBUSD: 'ETH/BUSD',
+      BNBBUSD: 'BNB/BUSD',
+    };
+
+    return result?.[PriceSymbol[symbol]]?.price || 0;
   }
 
   private logMessage(message, options?: any) {
