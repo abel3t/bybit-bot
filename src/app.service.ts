@@ -55,11 +55,10 @@ export class AppService {
     }
 
     const buySize = parseInt(process.env.BUY_SIZE) || 10;
-    const btcAmount = buySize / currentPrice;
-    const actualAmount = Math.floor(btcAmount / lotSize) * lotSize;
+    const actualAmount = parseFloat((buySize / currentPrice).toFixed(lotSize));
 
     this.logMessage(
-      `Buy ${symbol} at ${currentPrice}.\nAmount: ${actualAmount}`,
+      `Buy ${symbol} at ${currentPrice}\nAmount: ${actualAmount}\n`,
     );
 
     if (process.env.IS_ACTIVE === 'true') {
@@ -94,18 +93,15 @@ export class AppService {
 
     switch (symbol) {
       case btcSymbol: {
-        const lotSize = 0.0001;
-        return this.byCoin(btcSymbol, lotSize);
+        return this.byCoin(btcSymbol, 4);
       }
 
       case ethSymbol: {
-        const lotSize = 0.0001;
-        return this.byCoin(ethSymbol, lotSize);
+        return this.byCoin(ethSymbol, 4);
       }
 
       case bnbSymbol: {
-        const lotSize = 0.0001;
-        return this.byCoin(bnbSymbol, lotSize);
+        return this.byCoin(bnbSymbol, 3);
       }
 
       default:
