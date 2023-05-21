@@ -74,7 +74,6 @@ export class AppService {
     const bnbSymbol = 'BNBBUSD';
 
     const { BUSD: busdBalance } = await this.getBalance();
-    console.log(await this.getBalance())
     if (!busdBalance) {
       throw new BadRequestException('Can not fetch the balance');
     }
