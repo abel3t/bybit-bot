@@ -4,6 +4,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { binance } from 'ccxt';
+import { warn } from 'console';
 import * as moment from 'moment';
 
 @Injectable()
@@ -64,7 +65,13 @@ export class AppService {
     );
 
     const date = moment().startOf('day').format();
-    if (process.env.IS_ACTIVE === 'true' && this.buyCoinDate === date) {
+    if (this.buyCoinDate === date) {
+        console.log(`Bought ${symbol} at price: ${currentPrice} - ${date}`);
+        return { isCreateOrder: false };
+    }
+
+
+    if (process.env.IS_ACTIVE === 'true') {
       this.buyCoinDate = date;
 
       return this.exchange.createOrder(symbol, 'market', 'buy', actualAmount);
