@@ -8,6 +8,8 @@ import * as moment from 'moment';
 
 @Injectable()
 export class AppService {
+  buyCoinDate: Date | string;
+  
   constructor() {
     const apiKey = process.env.API_KEY;
     const secretKey = process.env.SECRET_KEY;
@@ -61,7 +63,10 @@ export class AppService {
       `Buy ${symbol} at ${currentPrice}\nAmount: ${actualAmount}\n`,
     );
 
-    if (process.env.IS_ACTIVE === 'true') {
+    const date = moment().startOf('day').format();
+    if (process.env.IS_ACTIVE === 'true' && this.buyCoinDate === date) {
+      this.buyCoinDate = date;
+
       return this.exchange.createOrder(symbol, 'market', 'buy', actualAmount);
     }
 
