@@ -70,10 +70,8 @@ export class AppService {
         return { isCreateOrder: false };
     }
 
-
+    this.buyCoinDate = date;
     if (process.env.IS_ACTIVE === 'true') {
-      this.buyCoinDate = date;
-
       return this.exchange.createOrder(symbol, 'market', 'buy', actualAmount);
     }
 
