@@ -5,9 +5,6 @@ import {
 } from '@nestjs/common';
 import { binance } from 'ccxt';
 import * as moment from 'moment';
-import axios from 'axios';
-import * as CryptoJS from 'crypto-js';
-
 @Injectable()
 export class OkxService {
   buyCoinDate: Date | string;
@@ -28,34 +25,6 @@ export class OkxService {
   }
 
   exchange: any;
-
-  placeOrder(params) {
-    const timestamp = new Date().toISOString();
-    const text =
-      timestamp + 'POST' + '/api/v5/trade/order' + JSON.stringify(params);
-
-    const sign = CryptoJS.enc.Base64.stringify(
-      CryptoJS.HmacSHA256(text, process.env.OKX_SECRET_KEY),
-    );
-
-    console.log({
-      'OK-ACCESS-KEY': process.env.OKX_API_KEY,
-      text,
-      'OK-ACCESS-PASSPHRASE': process.env.OKX_PASSWORD,
-      'OK-ACCESS-TIMESTAMP': timestamp,
-      'OK-ACCESS-SIGN': sign,
-    });
-    const BASE_URL = 'https://www.okx.com';
-    return axios.post(BASE_URL + '/api/v5/trade/order', params, {
-      headers: {
-        'OK-ACCESS-KEY': process.env.OKX_API_KEY,
-        // 'OK-ACCESS-PASSPHRASE': process.env.OKX_PASSWORD,
-        'OK-ACCESS-TIMESTAMP': timestamp,
-        // 'OK-ACCESS-SIGN': sign,
-        contentType: 'application/json',
-      } as any,
-    });
-  }
 
   getBalance() {
     return this.exchange
